@@ -1,25 +1,37 @@
 version: "3.9"
 
+x-superset-image: &superset-image apachesuperset.docker.scarf.sh/apache/superset:${TAG:-latest}
+x-superset-depends-on: &superset-depends-on
+  - db
+  - redis
+x-superset-volumes:
+  &superset-volumes # /app/pythonpath_docker will be appended to the PYTHONPATH in the final container
+  - ./docker:/app/docker
+  - superset_home:/app/superset_home
+
 configs:
   config_superset.v1:
     file: ./config/superset_config.py
   config_superset_client_secret.v1:
     file: ./config/client_secret.json
 
-volumes:
-  db_data_2:
-  kc_db_data_2:
 
 services:
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+        
   # DATABASES
   db:
-    image: postgres:16.1
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: passwd
-      POSTGRES_DB: superset
+    env_file: docker/.env-non-dev
+    image: postgres:14
+    restart: unless-stopped
     volumes:
-      - db_data_2:/var/lib/postgresql/data
+      - db_home:/var/lib/postgresql/data
+      - ./docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+
   kc_db:
     image: postgres:16.1
     environment:
@@ -34,7 +46,7 @@ services:
     image: quay.io/keycloak/keycloak:23.0.4
     command: start-dev
     ports:
-      - 8080:8080
+      - 9080:8080
     environment:
       KC_DB: postgres
       KC_DB_URL_HOST: kc_db
@@ -45,6 +57,7 @@ services:
       KC_DB_SCHEMA: public
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
+      KC_PROXY: "edge"
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
 
@@ -53,15 +66,72 @@ services:
     build: ./build/superset
     command: superset db upgrade
   
-  # supserset - initialization of roles and permission
-  superset_init:
-    build: ./build/superset
-    command: superset init
-  
-  # superset application itself
   superset:
-    build: ./build/superset
+    env_file: docker/.env-non-dev
+    image: *superset-image
+    command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
+    user: "root"
+    restart: unless-stopped
     ports:
-      - 8088:8088
+      - 8098:8088
+    depends_on: *superset-depends-on
+    volumes: 
+      - ./docker:/app/docker
+      - superset_home:/app/superset_home
+      - ./build/superset/client_secret.json:/app/pythonpath/client_secret.json
     extra_hosts:
       - "keycloak.localhost:host-gateway"
+
+  superset-init:
+    image: *superset-image
+    command: ["/app/docker/docker-init.sh"]
+    env_file: docker/.env-non-dev
+    depends_on: *superset-depends-on
+    user: "root"
+    volumes: 
+      - ./docker:/app/docker
+      - superset_home:/app/superset_home
+      - ./build/superset/client_secret.json:/app/pythonpath/client_secret.json
+    healthcheck:
+      disable: true
+
+  superset-worker:
+    image: *superset-image
+    command: ["/app/docker/docker-bootstrap.sh", "worker"]
+    env_file: docker/.env-non-dev
+    restart: unless-stopped
+    depends_on: *superset-depends-on
+    user: "root"
+    volumes: 
+      - ./docker:/app/docker
+      - superset_home:/app/superset_home
+      - ./build/superset/client_secret.json:/app/pythonpath/client_secret.json
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME",
+        ]
+
+  superset-worker-beat:
+    image: *superset-image
+    command: ["/app/docker/docker-bootstrap.sh", "beat"]
+    env_file: docker/.env-non-dev
+    restart: unless-stopped
+    depends_on: *superset-depends-on
+    user: "root"
+    volumes: 
+      - ./docker:/app/docker
+      - superset_home:/app/superset_home
+      - ./build/superset/client_secret.json:/app/pythonpath/client_secret.json
+    healthcheck:
+      disable: true
+
+volumes:
+  kc_db_data_2:
+  superset_home:
+    external: false
+  db_home:
+    external: false
+  redis:
+    external: false

@@ -1,0 +1,2 @@
+duckdb-engine
+git+https://github.com/qleroy/superset-oidc.git

@@ -21,6 +21,7 @@ class OIDCSecurityManager(SupersetSecurityManager):
         super(OIDCSecurityManager, self).__init__(appbuilder)
         logger.info(f"Mise en place de notre security manager custom nommé OIDCSecurityManager")
         if self.auth_type == AUTH_OID:
+            logger.info(f"L'authentification FAB est de type AUTH_OID")
             self.oid = OpenIDConnect(self.appbuilder.get_app)
         else:
             logger.error(f"Veuillez mettre le configuration AUTH_TYPE = AUTH_OID dans superset_config.py")
@@ -46,11 +47,13 @@ class AuthOIDCView(AuthOIDView):
 
     @expose('/login/', methods=['GET', 'POST'])
     def login(self, flag=True):
+        logger.debug(f"login")
         sm = self.appbuilder.sm
         oidc = sm.oid
 
         @self.appbuilder.sm.oid.require_login
         def handle_login():
+            logger.debug(f"handle_login")
             user = sm.auth_user_oid(oidc.user_getfield('email'))
 
             _username, _firstname, _lastname, _email, _sid = \
@@ -62,8 +65,12 @@ class AuthOIDCView(AuthOIDView):
 
             logger.info(f"Application des roles à l'utilisateur {user.username}")
             default_role = current_app.config.get("CUSTOM_AUTH_USER_REGISTRATION_ROLE", "Public")
+            logger.info(f"Avant self._attach_roles_for")
             self._attach_roles_for(user, default_roles=[default_role])
+            logger.info(f"Apres self._attach_roles_for")
+            logger.info(f"Avant update_user")
             sm.update_user(user)
+            logger.info(f"Apres update_user")
 
             login_user(user, remember=False, force=True)
             session[OIDC_SID_KEY] = _sid
@@ -73,6 +80,7 @@ class AuthOIDCView(AuthOIDView):
 
     @expose('/logout/', methods=['GET', 'POST'])
     def logout(self):
+        logger.debug("logout")
         oidc = self.appbuilder.sm.oid
 
         oidc.logout()
@@ -113,6 +121,7 @@ class AuthOIDCView(AuthOIDView):
     
     def _decode_logout_jwt(self, token: str, aud: str) -> dict:
         """ Décode un jeton jwt en vérifiant la signature """
+        logger.debug("f_decode_logout_jwt")
         sm: OIDCSecurityManager = self.appbuilder.sm
 
         signing_key = sm.jwkclient.get_signing_key_from_jwt(token)
@@ -125,6 +134,7 @@ class AuthOIDCView(AuthOIDView):
         Attache les roles fournis dans le token d'authentification à l'utilisateur superset local.
         Applique automatiquement les roles par défaut
         """
+        logger.debug("_attach_roles_for")
         sm = self.appbuilder.sm
         oidc = self.appbuilder.sm.oid
 
@@ -132,17 +142,24 @@ class AuthOIDCView(AuthOIDView):
             default_roles = []
 
         token_info_roles: dict = oidc.user_getinfo(['roles'])
+        logger.debug("{token_info_roles=}")
+        logger.debug("{default_roles=}")
         token_roles = default_roles
+        logger.debug("{token_roles=}")
         if 'roles' in token_info_roles:
             token_roles = token_info_roles['roles'] + token_roles
 
         token_roles_upper = [tr.upper() for tr in token_roles]
+        logger.debug("{token_roles_upper=}")
         all_roles = sm.get_all_roles()
-        roles_to_apply = [role for role in all_roles
-                 if role.name.upper() in token_roles_upper]
+        logger.debug(f"{all_roles=}")
+        roles_to_apply = [role for role in all_roles if role.name.upper() in token_roles_upper]
+        logger.debug(f"{roles_to_apply=}")
 
-        logger.debug(f"Application des roles {roles_to_apply} à {user}")
+        logger.debug(f"Application des roles {roles_to_apply=} à {user=}")
         user.roles = roles_to_apply
+        logger.debug(f"{user.roles=}")
+        logger.debug("END _attach_roles_for")
 
 def oidc_check_loggedin_or_logout():
     """
@@ -154,6 +171,7 @@ def oidc_check_loggedin_or_logout():
     from superset import security_manager as sm
     oidc = sm.oid if sm else None
     sm: OIDCSecurityManager = sm
+    logger.debug("oidc_check_loggedin_or_logout")
 
     if oidc is None:
         return
