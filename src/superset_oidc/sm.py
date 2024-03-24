@@ -147,7 +147,7 @@ class AuthOIDCView(AuthOIDView):
         token_roles = default_roles
         logger.debug(f"{token_roles=}")
         if 'roles' in token_info_roles:
-            token_roles = token_info_roles['roles'] + token_roles
+            token_roles = token_info_roles['roles'].split(",") + token_roles
 
         token_roles_upper = [tr.upper() for tr in token_roles]
         logger.debug(f"{token_roles_upper=}")
