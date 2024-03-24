@@ -142,15 +142,15 @@ class AuthOIDCView(AuthOIDView):
             default_roles = []
 
         token_info_roles: dict = oidc.user_getinfo(['roles'])
-        logger.debug("{token_info_roles=}")
-        logger.debug("{default_roles=}")
+        logger.debug(f"{token_info_roles=}")
+        logger.debug(f"{default_roles=}")
         token_roles = default_roles
-        logger.debug("{token_roles=}")
+        logger.debug(f"{token_roles=}")
         if 'roles' in token_info_roles:
             token_roles = token_info_roles['roles'] + token_roles
 
         token_roles_upper = [tr.upper() for tr in token_roles]
-        logger.debug("{token_roles_upper=}")
+        logger.debug(f"{token_roles_upper=}")
         all_roles = sm.get_all_roles()
         logger.debug(f"{all_roles=}")
         roles_to_apply = [role for role in all_roles if role.name.upper() in token_roles_upper]
