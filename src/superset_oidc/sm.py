@@ -82,6 +82,8 @@ class AuthOIDCView(AuthOIDView):
 
             if user is None:
                 user = sm.add_user(_username, _firstname, _lastname, _email, [])
+                logger.info(f"HANDLE LOGIN {user=}")
+                print(f"HANDLE LOGIN {user=}")
                 logger.info(f"""Création de l'utilisateur {_username}
                             dans superset""")
                 print(f"Création de l'utilisateur {_username} dans superset")
