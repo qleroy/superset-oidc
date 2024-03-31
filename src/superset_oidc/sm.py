@@ -86,8 +86,8 @@ class AuthOIDCView(AuthOIDView):
                             dans superset""")
                 print(f"Création de l'utilisateur {_username} dans superset")
 
-            logger.info(f"Application des roles à l'utilisateur {user.username}")
-            print(f"Application des roles à l'utilisateur {user.username}")
+            logger.info(f"Application des roles à l'utilisateur {_username}")
+            print(f"Application des roles à l'utilisateur {_username}")
             default_role = current_app.config.get(
                 "CUSTOM_AUTH_USER_REGISTRATION_ROLE", "Public"
             )
