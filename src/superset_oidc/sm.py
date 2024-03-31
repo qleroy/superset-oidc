@@ -81,6 +81,12 @@ class AuthOIDCView(AuthOIDView):
             ).values()
 
             if user is None:
+                logger.info(f"""HANDLE LOGIN USER IS NONE
+                            {_username=}
+                            {_firstname=}
+                            {_lastname=}
+                            {_email=}
+                            """)
                 user = sm.add_user(_username, _firstname, _lastname, _email, [])
                 logger.info(f"HANDLE LOGIN {user=}")
                 print(f"HANDLE LOGIN {user=}")
