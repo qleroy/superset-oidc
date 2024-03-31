@@ -162,6 +162,7 @@ class AuthOIDCView(AuthOIDView):
             default_roles = []
 
         token_info_roles: dict = oidc.user_getinfo(['roles'])
+        print(f"{oidc.user_getfield('roles')=}")
         logger.debug(f"{token_info_roles=}")
         print(f"{token_info_roles=}")
         logger.debug(f"{default_roles=}")
