@@ -1,7 +1,7 @@
 Metadata-Version: 2.1
 Name: superset-oidc
-Version: 1.0.1.dev0+gfa60332.d20240125
-Requires-Python: >=3.10
+Version: 0.1.dev8+gee4e497.d20240331
+Requires-Python: >=3.9
 Description-Content-Type: text/markdown
 Requires-Dist: Authlib
 Requires-Dist: flask_openid==1.3.0
@@ -12,27 +12,31 @@ Requires-Dist: itsdangerous==2.0.1
 
 Module to use oidc as part of superset authentication.
 
-|                      |                            |
-| -------------------- | -------------------------- |
-| source of the module | [custom folder](./custom/) |
-| a working example    | [example](./example/)      |
-
 Superset must be configured to use the module. 
+
+A working example is located [here](./example/).
 
 An example of configuration is located to [superset_config.py](./example/build/superset/superset_config.py).
 
-Also, don't forget to include [client_secret.json](./example/build/superset/client_secret.json)
+Also, don't forget to include [client_secret.json](./example/build/superset/client_secret.json).
 
-## Additionnal dependencies
+## Configuration keys
 
-The module relies on these dependencies. it is a reminder of the recipie located in [Dockerfile](./example/build/superset/Dockerfile)
+| key                                | type                   | description                                 |
+| ---------------------------------- | ---------------------- | ------------------------------------------- |
+| CUSTOM_AUTH_USER_REGISTRATION_ROLE | `string` (a role name) | Default role attributed to a superset user. |
 
-```
-pip install Authlib
-pip install flask_openid==1.3.0
-pip install flask-oidc==1.3.0
-pip install itsdangerous==2.0.1
-```
+## Limitations
+
+Here are the limitation and the impacts on the superset instance.
+
+- Role affectation in superset is obselete with this module.
+
+## How roles are managed
+
+The roles provided by the OIDC provider is the source of truth. We overwrite role affectation in superset with the JWT `roles` claim.
+
+Roles must exist in superset to be assigned (mapping is *case insensitive*) and a default role (`CUSTOM_AUTH_USER_REGISTRATION_ROLE`) is always set.
 
 ## Running example
 
